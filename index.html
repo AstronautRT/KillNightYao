@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>刘耀文新歌《Kill Night 耀》音乐数据监控面板</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 24px;
+        }
+
+        h1 {
+            color: #2d3436;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .data-table th {
+            background-color: #f8f9fa;
+            color: #495057;
+            font-weight: 600;
+        }
+
+        .data-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .update-time {
+            text-align: right;
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-top: 15px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+
+        .metric-value {
+            font-weight: bold;
+            color: #2d3436;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>歌曲数据监控 🎵</h1>
+        <div class="loading" id="loading">正在加载数据...</div>
+        <table class="data-table" id="data-table">
+            <thead>
+                <tr>
+                    <th>时间</th>
+                    <th>播放度</th>
+                    <th>推荐度</th>
+                    <th>畅销度</th>
+                    <th>总分</th>
+                    <th>总分小分</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <!-- 数据将动态插入到这里 -->
+            </tbody>
+        </table>
+        <div class="update-time" id="update-time"></div>
+    </div>
+
+    <script>
+        // 配置参数
+        const API_URL = 'https://yobank.tencentmusic.com/unichartsapi/v1/songs/394941424/charts_detail';
+        const REFRESH_INTERVAL = 60000; // 1分钟刷新一次
+
+        // 显示配置（根据实际API返回字段修改）
+        const DISPLAY_FIELDS = [
+            { key: 'rank', name: '时间', unit: '位' },
+            { key: 'play_count', name: '播放量', unit: '次' },
+            { key: 'share_count', name: '分享量', unit: '次' },
+            { key: 'favorite_count', name: '收藏量', unit: '次' }
+        ];
+
+        // 显示加载状态
+        function toggleLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+            document.getElementById('data-table').style.display = show ? 'none' : 'table';
+        }
+
+        // 创建表格行
+        function createTableRow({ name, value, unit }) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${name}</td>
+                <td class="metric-value">${value ?? 'N/A'}</td>
+                <td>${unit}</td>
+            `;
+            return tr;
+        }
+
+        // 更新表格数据
+        async function updateTable() {
+            try {
+                toggleLoading(true);
+                const response = await fetch(API_URL);
+                const data = await response.json();
+
+                const tbody = document.getElementById('table-body');
+                tbody.innerHTML = ''; // 清空旧数据
+
+                DISPLAY_FIELDS.forEach(field => {
+                    const value = data.data?.[field.key] ?? 'N/A';
+                    tbody.appendChild(createTableRow({
+                        name: field.name,
+                        value: typeof value === 'number' ? value.toLocaleString() : value,
+                        unit: field.unit
+                    }));
+                });
+
+                document.getElementById('update-time').textContent =
+                    `最后更新时间：${new Date().toLocaleTimeString()}`;
+            } catch (error) {
+                console.error('获取数据失败:', error);
+                document.getElementById('table-body').innerHTML = `
+                    <tr>
+                        <td colspan="3" style="color: #dc3545;">数据加载失败，请稍后重试</td>
+                    </tr>
+                `;
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        // 初始化
+        updateTable();
+        setInterval(updateTable, REFRESH_INTERVAL);
+    </script>
+</body>
+</html>
